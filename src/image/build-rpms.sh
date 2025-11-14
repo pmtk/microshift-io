@@ -50,11 +50,11 @@ export SOURCE_GIT_TREE_STATE
 export MICROSHIFT_VARIANT
 
 if [[ "${target}" == "all" || "${target}" == "rpm" ]]; then
-    ./packaging/rpm/make-rpm.sh rpm local
+    bash -x ./packaging/rpm/make-rpm.sh rpm local
 fi
 
 if [[ "${target}" == "all" || "${target}" == "srpm" ]]; then
-    ./packaging/rpm/make-rpm.sh srpm local
+    bash -x ./packaging/rpm/make-rpm.sh srpm local
 fi
 
 echo "${MICROSHIFT_VERSION}" > "${HOME}/microshift/_output/rpmbuild/version.txt"

@@ -77,6 +77,25 @@ rpm:
 	echo "Build completed successfully" && \
 	echo "RPMs are available in '$${outdir}'"
 
+.PHONY: rpm2
+rpm2:
+	@echo "Building the MicroShift RPMs"
+	podman build \
+        -t rpm-builder2 \
+        --ulimit nofile=524288:524288 \
+        --build-arg USHIFT_BRANCH="${USHIFT_BRANCH}" \
+        --build-arg OKD_VERSION_TAG="${OKD_VERSION_TAG}" \
+        -f packaging/rpm-builder2.Containerfile .
+
+	@echo "Extracting the MicroShift RPMs"
+	# outdir="$${RPM_OUTDIR:-$$(mktemp -d /tmp/microshift-rpms-XXXXXX)}" && \
+	# mntdir="$$(sudo podman image mount "${BUILDER_IMAGE}")" && \
+	# sudo cp -r "$${mntdir}/home/microshift/microshift/_output/rpmbuild/RPMS/." "$${outdir}" && \
+	# sudo podman image umount "${BUILDER_IMAGE}" && \
+	# echo "" && \
+	# echo "Build completed successfully" && \
+	# echo "RPMs are available in '$${outdir}'"
+
 .PHONY: rpm-to-deb
 rpm-to-deb:
 	if [ -z "${RPM_OUTDIR}" ] ; then \
