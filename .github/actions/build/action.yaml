@@ -31,6 +31,10 @@ inputs:
   build:
     description: Types of artifacts to build (all, rpms, bootc-image)
     required: true
+  rpm-image:
+    description: Name of container image with RPMs
+    required: false
+    default: microshift-okd-rpm
 
 runs:
   using: "composite"
@@ -40,9 +44,11 @@ runs:
       uses: ./.github/actions/debug-info
 
     - name: Prepare the build and run environment
+      if: inputs.rpm-image == 'microshift-okd-rpm'
       uses: ./.github/actions/prebuild
 
     - name: Build MicroShift RPMs
+      if: inputs.rpm-image == 'microshift-okd-rpm'
       shell: bash
       run: |
         # See https://github.com/microshift-io/microshift/blob/main/docs/build.md
@@ -73,6 +79,7 @@ runs:
         make image \
           BOOTC_IMAGE_URL="${{ inputs.bootc-image-url }}" \
           BOOTC_IMAGE_TAG="${{ inputs.bootc-image-tag }}" \
+          RPM_IMAGE=${{ inputs.rpm-image }} \
           ${make_opts[@]}
 
     - name: Run a test to verify that MicroShift is functioning properly
