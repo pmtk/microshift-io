@@ -1,8 +1,9 @@
 # Optionally allow for the base image override
 ARG BOOTC_IMAGE_URL=quay.io/centos-bootc/centos-bootc
 ARG BOOTC_IMAGE_TAG=stream9
+ARG RPM_IMAGE=microshift-okd-rpm
 
-FROM localhost/microshift-okd-rpm:latest AS builder
+FROM localhost/${RPM_IMAGE}:latest AS builder
 FROM ${BOOTC_IMAGE_URL}:${BOOTC_IMAGE_TAG}
 
 ARG REPO_CONFIG_SCRIPT=/tmp/create_repos.sh
