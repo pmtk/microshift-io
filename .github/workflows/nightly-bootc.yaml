@@ -1,0 +1,87 @@
+name: nightly-bootc
+
+on:
+  pull_request:
+  schedule:
+     - cron: "0 3 * * *"
+  workflow_dispatch:
+
+env:
+  BOOTC_IMAGE_URL: quay.io/centos-bootc/centos-bootc
+  BOOTC_IMAGE_TAG: stream10
+
+jobs:
+  build-nightly-bootc-image:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out MicroShift upstream repository
+        uses: actions/checkout@v4
+
+      - name: Prepare the build and run environment
+        uses: ./.github/actions/prebuild
+
+    #   - name: Install qemu-user-static for cross-platform builds
+    #     run: |
+    #       sudo apt install -y qemu-user-static
+
+      - name: Create nightly bootc image manifest
+        run: |
+          sudo podman manifest create "ghcr.io/${{ github.repository }}:nightly-bootc"
+
+    #   - name: Build ARM64 image
+    #     run: |
+    #       sudo podman build -t bootc-nightly-arm64 \
+    #         --platform linux/arm64 \
+    #         --manifest "ghcr.io/${{ github.repository }}:nightly-bootc" \
+    #         --build-arg BOOTC_IMAGE_URL=${{ env.BOOTC_IMAGE_URL }} \
+    #         --build-arg BOOTC_IMAGE_TAG=${{ env.BOOTC_IMAGE_TAG }} \
+    #         -f ./packaging/nightly/bootc.Containerfile ${GITHUB_WORKSPACE}
+    #       sudo podman images
+
+      - name: Build AMD64 image
+        run: |
+          sudo podman build -t bootc-nightly-amd64 \
+            --platform linux/amd64 \
+            --build-arg BOOTC_IMAGE_URL=${{ env.BOOTC_IMAGE_URL }} \
+            --build-arg BOOTC_IMAGE_TAG=${{ env.BOOTC_IMAGE_TAG }} \
+            -f ./packaging/nightly/bootc.Containerfile ${GITHUB_WORKSPACE}
+          sudo podman images
+
+      - name: Test AMD64 image
+        run: |
+          make USHIFT_IMAGE=bootc-nightly-amd64 LVM_VOLSIZE=0 run run-ready run-healthy stop clean
+
+      - name: Collect sos-report on failure
+        if: failure()
+        uses: ./.github/actions/sos-report
+
+      - name: Login to GitHub Container Registry
+        uses: ./.github/actions/podman-login
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish images and manifests
+        run: |
+          VERSION="$(sudo podman run -ti --rm --entrypoint bash localhost/bootc-nightly-amd64 -c 'rpm -qa microshift' | cut -d'-' -f2)"
+
+          REF_NIGHTLY="ghcr.io/${{ github.repository }}:nightly"
+          REF_VERSION="ghcr.io/${{ github.repository }}:${VERSION}"
+
+          sudo podman tag bootc-nightly-amd64 "${REF_NIGHTLY}-amd64" "${REF_VERSION}-amd64"
+          sudo podman push "${REF_NIGHTLY}-amd64"
+          sudo podman push "${REF_VERSION}-amd64"
+
+          # sudo podman tag bootc-nightly-arm64 "${REF_NIGHTLY}-arm64" "${REF_VERSION}-arm64"
+          # sudo podman push "${REF_NIGHTLY}-arm64"
+          # sudo podman push "${REF_VERSION}-arm64"
+
+          sudo podman manifest create "${REF_NIGHTLY}"
+          sudo podman manifest add "${REF_NIGHTLY}" "${REF_NIGHTLY}-amd64"
+          # sudo podman manifest add "${REF_NIGHTLY}" "${REF_NIGHTLY}-arm64"
+          sudo podman manifest push "${REF_NIGHTLY}"
+
+          sudo podman manifest create "${REF_VERSION}"
+          sudo podman manifest add "${REF_VERSION}" "${REF_VERSION}-amd64"
+          # sudo podman manifest add "${REF_VERSION}" "${REF_VERSION}-arm64"
+          sudo podman manifest push "${REF_VERSION}"
+
