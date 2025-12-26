@@ -20,23 +20,22 @@ jobs:
       - name: Prepare the build and run environment
         uses: ./.github/actions/prebuild
 
-    #   - name: Install qemu-user-static for cross-platform builds
-    #     run: |
-    #       sudo apt install -y qemu-user-static
+      - name: Install qemu-user-static for cross-platform builds
+        run: |
+          sudo apt install -y qemu-user-static
 
       - name: Create nightly bootc image manifest
         run: |
           sudo podman manifest create "ghcr.io/${{ github.repository }}:nightly-bootc"
 
-    #   - name: Build ARM64 image
-    #     run: |
-    #       sudo podman build -t bootc-nightly-arm64 \
-    #         --platform linux/arm64 \
-    #         --manifest "ghcr.io/${{ github.repository }}:nightly-bootc" \
-    #         --build-arg BOOTC_IMAGE_URL=${{ env.BOOTC_IMAGE_URL }} \
-    #         --build-arg BOOTC_IMAGE_TAG=${{ env.BOOTC_IMAGE_TAG }} \
-    #         -f ./packaging/nightly/bootc.Containerfile ${GITHUB_WORKSPACE}
-    #       sudo podman images
+      - name: Build ARM64 image
+        run: |
+          sudo podman build -t bootc-nightly-arm64 \
+            --platform linux/arm64 \
+            --build-arg BOOTC_IMAGE_URL=${{ env.BOOTC_IMAGE_URL }} \
+            --build-arg BOOTC_IMAGE_TAG=${{ env.BOOTC_IMAGE_TAG }} \
+            -f ./packaging/nightly/bootc.Containerfile ${GITHUB_WORKSPACE}
+          sudo podman images
 
       - name: Build AMD64 image
         run: |
@@ -71,17 +70,17 @@ jobs:
           sudo podman push "${REF_NIGHTLY}-amd64"
           sudo podman push "${REF_VERSION}-amd64"
 
-          # sudo podman tag bootc-nightly-arm64 "${REF_NIGHTLY}-arm64" "${REF_VERSION}-arm64"
-          # sudo podman push "${REF_NIGHTLY}-arm64"
-          # sudo podman push "${REF_VERSION}-arm64"
+          sudo podman tag bootc-nightly-arm64 "${REF_NIGHTLY}-arm64" "${REF_VERSION}-arm64"
+          sudo podman push "${REF_NIGHTLY}-arm64"
+          sudo podman push "${REF_VERSION}-arm64"
 
           sudo podman manifest create "${REF_NIGHTLY}"
           sudo podman manifest add "${REF_NIGHTLY}" "${REF_NIGHTLY}-amd64"
-          # sudo podman manifest add "${REF_NIGHTLY}" "${REF_NIGHTLY}-arm64"
+          sudo podman manifest add "${REF_NIGHTLY}" "${REF_NIGHTLY}-arm64"
           sudo podman manifest push "${REF_NIGHTLY}"
 
           sudo podman manifest create "${REF_VERSION}"
           sudo podman manifest add "${REF_VERSION}" "${REF_VERSION}-amd64"
-          # sudo podman manifest add "${REF_VERSION}" "${REF_VERSION}-arm64"
+          sudo podman manifest add "${REF_VERSION}" "${REF_VERSION}-arm64"
           sudo podman manifest push "${REF_VERSION}"
 
