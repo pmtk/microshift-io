@@ -1,4 +1,4 @@
-name: release-copr-nightly
+name: nightly-copr
 
 on:
   pull_request:

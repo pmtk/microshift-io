@@ -33,6 +33,11 @@ _is_container_created() {
 }
 
 create_topolvm_backend() {
+    if [ "${LVM_VOLSIZE}" = "0" ]; then
+        echo "INFO: LVM_VOLSIZE is 0, skipping TopoLVM backend creation"
+        return 0
+    fi
+
     if [ -f "${LVM_DISK}" ]; then
         echo "INFO: '${LVM_DISK}' exists, reusing"
         return 0
@@ -118,6 +123,7 @@ _add_node() {
     local mount_opts=""
     if [ "${EXPOSE_KUBEAPI_PORT}" = "1" ]; then
         port_opts="-p ${API_SERVER_PORT}:${API_SERVER_PORT}"
+        sudo mkdir -p "$(dirname "${EXTRA_CONFIG}")"
         echo -e "apiServer:\n  subjectAltNames:\n    - $(_get_hostname)" | sudo tee "${EXTRA_CONFIG}" >/dev/null
         mount_opts="--volume ${EXTRA_CONFIG}:/etc/microshift/config.d/api_server.yaml:ro"
     fi
