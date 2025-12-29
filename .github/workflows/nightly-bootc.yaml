@@ -71,11 +71,15 @@ jobs:
 
           sudo podman tag bootc-nightly-amd64 "${REF_NIGHTLY}-amd64" "${REF_NIGHTLY_DATE}-amd64" "${REF_VERSION}-amd64" "${REF_VERSION_DATE}-amd64"
           sudo podman push "${REF_NIGHTLY}-amd64"
+          sudo podman push "${REF_NIGHTLY_DATE}-amd64"
           sudo podman push "${REF_VERSION}-amd64"
+          sudo podman push "${REF_VERSION_DATE}-amd64"
 
           sudo podman tag bootc-nightly-arm64 "${REF_NIGHTLY}-arm64" "${REF_NIGHTLY_DATE}-arm64" "${REF_VERSION}-arm64" "${REF_VERSION_DATE}-arm64"
           sudo podman push "${REF_NIGHTLY}-arm64"
+          sudo podman push "${REF_NIGHTLY_DATE}-arm64"
           sudo podman push "${REF_VERSION}-arm64"
+          sudo podman push "${REF_VERSION_DATE}-arm64"
 
           sudo podman manifest create "${REF_NIGHTLY}"
           sudo podman manifest add "${REF_NIGHTLY}" "${REF_NIGHTLY}-amd64"
