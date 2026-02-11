@@ -8,19 +8,6 @@
 
 %global golang_version 1.13
 
-%{!?version: %global version 0.0.1}
-%{!?release: %global release 1}
-
-%{!?commit:
-# DO NOT MODIFY: the value on the line below is sed-like replaced by openshift/doozer
-%global commit e0a5699f2049372633b18c43a98a522999b1f297
-}
-
-%if ! 0%{?os_git_vars:1}
-# DO NOT MODIFY: the value on the line below is sed-like replaced by openshift/doozer
-%global os_git_vars OS_GIT_VERSION='' OS_GIT_COMMIT='' OS_GIT_MAJOR='' OS_GIT_MINOR='' OS_GIT_TREE_STATE=''
-%endif
-
 %if "%{os_git_vars}" == "ignore"
 %global make make
 %else
