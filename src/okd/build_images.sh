@@ -110,15 +110,46 @@ router_image() {
 
   podman build --platform "linux/${TARGET_ARCH}" -t "${images[haproxy-router-base]}" -f "${dockerfile_base_path}" .
 
-  # TODO: Implement a proper way to handle the haproxy28 package for the amd64 architecture
+  # TODO: Implement a proper way to handle the haproxy-router for the amd64 architecture
   if [ "${TARGET_ARCH}" != "arm64" ] ; then
     return
   fi
 
   sed -i "s|^FROM registry.ci.openshift.org/ocp/.*|FROM ${images[haproxy-router-base]}|" "${dockerfile_haproxy_path}"
-  sed -i "s|haproxy28|https://github.com/praveenkumar/minp/releases/download/v0.0.1/haproxy28-2.8.10-1.rhaos4.17.el9.aarch64.rpm|" "${dockerfile_haproxy_path}"
+
+  # Detect which haproxy package the upstream Dockerfile requires
+  local haproxy_pkg
+  haproxy_pkg=$(grep -oE 'haproxy[0-9]+' "${dockerfile_haproxy_path}" | head -1)
+
+  if [ "${haproxy_pkg}" = "haproxy28" ] ; then
+    # Use the pre-built haproxy28 RPM for aarch64
+    sed -i "s|haproxy28|https://github.com/praveenkumar/minp/releases/download/v0.0.1/haproxy28-2.8.10-1.rhaos4.17.el9.aarch64.rpm|" "${dockerfile_haproxy_path}"
+  else
+    # Build HAProxy from source since the versioned haproxy package (e.g. haproxy32)
+    # is only available in RHAOS repos, not in CentOS Stream 9
+    local -r haproxy_version="3.2.21"
+    local -r haproxy_dir="haproxy-${haproxy_version}"
+    local -r haproxy_tarball="${haproxy_dir}.tar.gz"
+    local -r haproxy_sha256="0cb8818a26c5f888e0cb1c40f1b3acb9fb952527d1733f769ce688fedd680339"
+    curl --fail -sL "https://www.haproxy.org/download/3.2/src/${haproxy_tarball}" -o "${repo}/${haproxy_tarball}"
+    printf '%s  %s\n' "${haproxy_sha256}" "${repo}/${haproxy_tarball}" | sha256sum --check --
+    # shellcheck disable=SC2016
+    podman run --rm --platform "linux/${TARGET_ARCH}" \
+      -v "${repo}/${haproxy_tarball}:/tmp/${haproxy_tarball}:Z" \
+      -v "${repo}/images/router/haproxy:/output:Z" \
+      "${images[haproxy-router-base]}" \
+      bash -c 'set -euo pipefail && \
+        dnf --disablerepo=rt install -y gcc make openssl-devel pcre2-devel && \
+        cd /tmp && tar xzf '"${haproxy_tarball}"' && \
+        cd '"${haproxy_dir}"' && \
+        make -j$(nproc) TARGET=linux-glibc USE_OPENSSL=1 USE_PCRE2=1 && \
+        cp haproxy /output/haproxy-bin'
+    sed -i "s|${haproxy_pkg} ||" "${dockerfile_haproxy_path}"
+    sed -i "/^FROM.*haproxy-router-base/a COPY images/router/haproxy/haproxy-bin /usr/sbin/haproxy" "${dockerfile_haproxy_path}"
+  fi
+
   # shellcheck disable=SC2016
-  sed -i 's|yum install -y $INSTALL_PKGS|yum --disablerepo=rt install -y $INSTALL_PKGS|' "${dockerfile_haproxy_path}"
+  sed -i 's|yum install -y\( --setopt=install_weak_deps=0\)\{0,1\} $INSTALL_PKGS|yum --disablerepo=rt install -y $INSTALL_PKGS|' "${dockerfile_haproxy_path}"
 
   podman build --platform "linux/${TARGET_ARCH}" -t "${images[haproxy-router]}" -f "${dockerfile_haproxy_path}" .
 }
